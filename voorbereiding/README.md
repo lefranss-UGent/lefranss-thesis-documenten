@@ -1,0 +1,1 @@
+De Linux-practica zijn nuttig als voorbereiding op de thesis. Deze kunnen gevonden worden op de vakwebsite Besturingssystemen op Ufora onder Inhoud > Werkcolleges > handleiding_practica of in de map linux-lab.
