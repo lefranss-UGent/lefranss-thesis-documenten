@@ -3,6 +3,7 @@ arm_64bit=1
 
 disable_commandline_tags=1
 #arm_peri_high=1
+arm peri high=0 # enable Low Peripheral Mode
 kernel=bootloader.bin
 
 kernel_old=1 # puts kernel at 0x0 instead of 0x80000. This is needed for the bootloader which loads at 0x0, and then we load the real kernel at 0x80000. That way the real kernel can also easily be put on the SD card by just switching this into =0
