@@ -1,0 +1,30 @@
+https://plato.ea.ugent.be/masterproef/studenten/bekijken2.php?key=N/A&id=26847&ref=1
+
+
+Promotor 1:	dr. Bart Coppens 	Promotor 2:	prof. dr. ir. Bjorn De Sutter 
+Begeleider 1:	dr. ir. Bert Abrath 	 	 
+Aantal studenten:	1	Richting:	Master of Science in de industriële wetenschappen: informatica
+Aantal masterproeven:	1	Academiejaar:	2021-2022
+
+
+Contactpersoon: dr. Bart Coppens 
+
+Probleemstelling:
+Despite all efforts, modern software still contains vulnerabilities that can be exploited by attackers. One way to defend against some classes of vulnerabilities is Multi-Variant Execution. The same program is executed multiple times, but each variant is made different in such a way that it is hard for an attacker to attack both variants with the same exploit. The Multi-Variant Execution Environment (MVEE) feeds the user's input to all variants, and it monitors and compares the behavior of these variants. Once it detects a discrepancy in behavior, this is seen as an attack in progress and the program is automatically shut down, thus protecting the user.  
+
+One potential downside is the overhead that such an MVEE introduces. Thus, previous research from our research group has developed patches to the Linux kernel to improve the performance. While these patches significantly improve the performance of MVEEs, these patches are not present in mainline Linux kernels, thus delaying possible adoption of MVEEs.
+
+
+Doelstelling:
+In this thesis, we will try to overcome the need for a custom Linux kernel by making use of recently-added features. In particular, in the past year a new Linux feature called Syscall User Dispatch was added, for an entirely different purpose: that of enabling faster emulation of Windows games. However, this feature seems well-suited as a basis for an alternative approach for speeding up MVEEs, without requiring our custom kernel patch. This new feature works in tandem with other modern Linux kernel features, such as eBPF and seccomp, in order to secure it. Seccomp and eBPF are technologies that allow user applications to create small filters and scripts that are executed by the kernel, and can be configured to allow/disallow certain system calls immediately in the kernel, without these requests having to be handled by a separate monitoring component.
+
+You will start by studying how the Syscall User Dispatch feature exactly works, and how our existing approach works (which combines the aforementioned kernel patch with monitoring components which are injected into the variants). Then, you will design and implement code appropriate code to configure this Syscall User Dispatch mechanism, and develop the code that interacts with it to monitor the execution of the variants.
+
+If time allows it, you can continue speeding up MVEEs by applying eBPF and seccomp in other subsystems of the MVEE.
+
+
+Locatie:
+Vakgroep en thuis
+
+Onderwerp voorbehouden voor:
+Lennert Franssens
