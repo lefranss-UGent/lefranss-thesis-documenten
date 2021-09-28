@@ -1,3 +1,3 @@
-# thesis
+# Boosting Multi-Variant Execution through Modern OS Extensions
 
-http://masterproef.tiwi.ugent.be/
+More info about deadlines and assignments: http://masterproef.tiwi.ugent.be/

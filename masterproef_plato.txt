@@ -1,5 +1,7 @@
 https://plato.ea.ugent.be/masterproef/studenten/bekijken2.php?key=N/A&id=26847&ref=1
 
+26847: Boosting Multi-Variant Execution through Modern OS Extensions
+
 
 Promotor 1:	dr. Bart Coppens 	Promotor 2:	prof. dr. ir. Bjorn De Sutter 
 Begeleider 1:	dr. ir. Bert Abrath 	 	 
