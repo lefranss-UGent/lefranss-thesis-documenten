@@ -1,6 +1,3 @@
-## Code
-https://github.com/stijn-volckaert/ReMon
-
 ## eBPF & seccomp
 Filter and Modify System Calls with seccomp and ptrace:
 * https://www.alfonsobeato.net/c/filter-and-modify-system-calls-with-seccomp-and-ptrace/
