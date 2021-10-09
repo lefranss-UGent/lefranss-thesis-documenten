@@ -1,0 +1,27 @@
+From a6366b7097ea105dc471a1e46dd86d7a83ac4379 Mon Sep 17 00:00:00 2001
+From: babrath <bert.abrath@UGent.be>
+Date: Fri, 8 Oct 2021 19:09:30 +0200
+Subject: [PATCH] Small patch to show that all deps are installed.
+
+---
+ CMakeLists.txt | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1a1f8a5..beb5249 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -6,9 +6,7 @@ if (NOT CMAKE_BUILD_TYPE)
+         set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug Release" FORCE)
+ endif()
+ 
+-if(DEFINED ENV{MVEE_DEPS_PRESENT_IN_SYSTEM})
+-        set(DEPS_PRESENT_IN_SYSTEM TRUE)
+-endif()
++set(DEPS_PRESENT_IN_SYSTEM TRUE)
+ 
+ # Set the output directories
+ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+-- 
+2.33.0
+
