@@ -30,6 +30,9 @@ sudo apt install -y perl
 printf "\n${yel}[INFO]${end} Install make\n"
 sudo apt install -y make
 
+printf "\n${yel}[INFO]${end} Install clang\n"
+sudo apt install -y clang
+
 printf "\n${yel}[INFO]${end} Install wget\n"
 sudo apt install -y wget
 
