@@ -31,9 +31,10 @@ int main(int argc, char **argv)
 
 	if ((pid = fork()) == 0)
 	{
-		// CHILD
-		// trace write and openat syscall - openat is used on ubuntu rather than open
-		// execve is always traced!
+		/* CHILD */
+
+		// trace write, read and openat syscall (openat is used on ubuntu rather than open)
+		// NOTE: execve (no. 59) is always traced!
 		// TODO: you can uncomment the lines of __NR_close to demonstrate that this is allowed and not traced if not in the filter (purpose of the whole demonstration)
 		struct sock_filter filter[] = {
 			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, nr)),
@@ -54,7 +55,7 @@ int main(int argc, char **argv)
 			.len = (unsigned short) (sizeof(filter)/sizeof(filter[0])),
 		};
 		
-		// ptrace child
+		// ptrace (this) forked child
 		ptrace(PTRACE_TRACEME, 0, 0, 0);
 		
 		// avoid the need for CAP_SYS_ADMIN
@@ -70,20 +71,26 @@ int main(int argc, char **argv)
 			return 1;
 		}
 		
+		// send SIGSTOP signal to this forked process
 		kill(getpid(), SIGSTOP);
 		
 		// some commands if not executing in execve
-		/*printf("hello test 1\n"); // syscall 1
-		printf("hello test 2\n"); // syscall 1
+		// we see that this will not introduce execve (59) syscalls and has less open (2) syscalls
+		/*// printf will execute a write syscall (no. 1)
+		printf("hello test 1\n");
+		printf("hello test 2\n");
 		FILE *fp;
 		char buff[255];
-		fp = fopen("/home/lennertfranssens/Documents/bpf/hello", "r"); // syscall 2 or 257
+		// fopen will execute an openat syscall (no. 257 - or 2 if it was open)
+		fp = fopen("/home/lennertfranssens/Documents/bpf/hello", "r");
+		// fscanf will execute a read syscall (no. 0)
 		fscanf(fp, "%s", buff);
-		fclose(fp); // syscall 3
-		printf("%s\n", buff); // syscall 1
+		// fclose will execute a close syscall (no. 3)
+		fclose(fp);
+		printf("%s\n", buff);
 		return 0;*/
-
-		// executing execve
+		
+		// count arguments length (number of characters + space or \0)
 		int argv_len = 0;
 		for (int i = 1; i < argc; ++i)
 	       	{
@@ -92,6 +99,7 @@ int main(int argc, char **argv)
 				argv_len += strlen(argv[i]) + 1;
 			}
 		}
+		// make new array of characters to store the arguments (program to execute in execve and its parameters)
 		char new_argv[argv_len + 1];
 		new_argv[0] = '\0';
 		for (int i = 1; i < argc; ++i)
@@ -102,9 +110,12 @@ int main(int argc, char **argv)
 			}
 			strcat(new_argv, argv[i]);
 		}
+		// construct argument for execve
 		char* execve_args[] = {(char*)"sh", (char*)"-c", new_argv, NULL};
 		return execv("/bin/bash", execve_args);
 	} else {
+		/* PARENT */
+
 		waitpid(pid, &status, 0);
 		ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_TRACESECCOMP);
 		
