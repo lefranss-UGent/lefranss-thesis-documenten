@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <signal.h>
 #include <errno.h>
@@ -67,6 +68,7 @@ extern unsigned int raw_syscall(long number,
 int __thread id = 0;
 int pid;
 
+// How can I return the return value of the system call back to where the system call was blocked?
 static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
 {
 	struct ucontext_t *ctx = ucontext;
@@ -112,7 +114,7 @@ int main(void)
 {
 	struct sigaction act;
 	int ret;
-	sigset_t mask;
+	sigset_t mask; /* set of signals that the thread is currently blocking */
 
 	memset(&act, 0, sizeof(act));
 	sigemptyset(&mask);
@@ -148,6 +150,28 @@ int main(void)
         syscall(SYS_gettid);
 	write(STDOUT_FILENO, buffer, length);
 
+	int fd, n;
+	unsigned char buff[BUFSIZ];
+	if ( (fd = open("/etc/passwd", O_RDONLY)) < 0) {
+		perror("No hello file found...");
+		exit(-1);
+	}
+	/*while ( (n = read(fd, buff, BUFSIZ)) > 0) {
+		if (write(1, buff, n) < 0) {
+			perror("Error while writing out buffer...");
+			exit(1);
+		}
+	}
+	if (n < 0) {
+		perror("Error while reading hello file...");
+		exit(1);
+	}*/
+	if (close(fd) < 0) {
+		perror("Error while closing hello file...");
+		exit(1);
+	}
+
+
 #ifdef TEST_BLOCKED_RETURN
 	if (selector == SYSCALL_DISPATCH_FILTER_ALLOW) {
 		fprintf(stderr, "Failed to return with selector blocked.\n");
@@ -158,7 +182,6 @@ int main(void)
 	SYSCALL_UNBLOCK;
 
 	printf("trapped_call_count %lu, native_call_count %lu.\n",
-	       trapped_call_count, native_call_count);
+		trapped_call_count, native_call_count);
 	return 0;
-
 }
