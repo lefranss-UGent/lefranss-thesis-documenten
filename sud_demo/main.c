@@ -1,219 +1,164 @@
 #define _GNU_SOURCE
-#include<stdio.h>
-#include<sys/prctl.h>
-#include<stdlib.h>
-#include<string.h>
-#include<errno.h>
-
 #include <stdio.h>
-#include <sys/prctl.h>
-#include <sys/sysinfo.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <signal.h>
+#include <errno.h>
 #include <time.h>
 #include <sys/time.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
-#include <pthread.h>
+#include <sys/sysinfo.h>
+#include <sys/prctl.h>
 #include <sys/syscall.h>
-
 
 #include <ucontext.h>
 
-//#define USE_DISPATCHER
-#define TEST_COUNT 4000000
+#ifndef PR_SET_SYSCALL_USER_DISPATCH
+# define PR_SET_SYSCALL_USER_DISPATCH	59
+# define PR_SYS_DISPATCH_OFF	0
+# define PR_SYS_DISPATCH_ON	1
+# define SYSCALL_DISPATCH_FILTER_ALLOW	0
+# define SYSCALL_DISPATCH_FILTER_BLOCK	1
+#endif
 
-#define SYSCALL_DISABLE_ALLOW 0
-#define SYSCALL_DISABLE_BLOCK 1
+#ifdef __NR_syscalls
+# define MAGIC_SYSCALL_1 (__NR_syscalls + 1) /* Bad Linux syscall number */
+#else
+# define MAGIC_SYSCALL_1 (0xff00)  /* Bad Linux syscall number */
+#endif
+
+/*
+ * To test returning from a sigsys with selector blocked, the test
+ * requires some per-architecture support (i.e. knowledge about the
+ * signal trampoline address).  On i386, we know it is on the vdso, and
+ * a small trampoline is open-coded for x86_64.  Other architectures
+ * that have a trampoline in the vdso will support TEST_BLOCKED_RETURN
+ * out of the box, but don't enable them until they support syscall user
+ * dispatch.
+ */
+#if defined(__x86_64__) || defined(__i386__)
+#define TEST_BLOCKED_RETURN
+#endif
+
+#ifdef __x86_64__
+void* (syscall_dispatcher_start)(void);
+void* (syscall_dispatcher_end)(void);
+#else
+unsigned long syscall_dispatcher_start = 0;
+unsigned long syscall_dispatcher_end = 0;
+#endif
+
+unsigned long trapped_call_count = 0;
+unsigned long native_call_count = 0;
+
+char selector;
+#define SYSCALL_BLOCK   (selector = SYSCALL_DISPATCH_FILTER_BLOCK)
+#define SYSCALL_UNBLOCK (selector = SYSCALL_DISPATCH_FILTER_ALLOW)
 
 extern void* (syscall_dispatcher)(void);
 extern void* (syscall_instruction_entry)(void);
 extern unsigned int raw_syscall(long number,
-				unsigned long arg1, unsigned long arg2,
-				unsigned long arg3, unsigned long arg4,
-				unsigned long arg5, unsigned long arg6);
+                                unsigned long arg1, unsigned long arg2,
+                                unsigned long arg3, unsigned long arg4,
+                                unsigned long arg5, unsigned long arg6);
 #define T(x) x?"PARENT":"CHILD"
 
 int __thread id = 0;
-unsigned long trapped_call_count = 0;
-unsigned long native_call_count = 0;
 int pid;
-
-#ifdef USE_DISPATCHER
-#define SYSINFO(x) raw_syscall(SYS_sysinfo, (unsigned long)x, 0,0,0,0,0)
-#else
-#define SYSINFO(x) sysinfo(x)
-#endif
-
-int *sel_ptr;
-
-#define FASTVAR
-
-#ifdef FASTVAR
-#define SYSCALL_BLOCK (*sel_ptr) = 1;
-#define SYSCALL_UNBLOCK (*sel_ptr) = 0;
-#else
-#define SYSCALL_BLOCK raw_syscall(SYS_prctl, 59, SYSCALL_DISABLE_BLOCK,\
-				  (unsigned long) &syscall_dispatcher, (unsigned long)sel_ptr, 0, 0);
-#define SYSCALL_UNBLOCK	raw_syscall(SYS_prctl, 59, SYSCALL_DISABLE_ALLOW, 0, 0, 0, 0);
-#endif
-
-
-static double perf_syscall()
-{
-	struct sysinfo info;
-	struct timespec ts;
-	unsigned int i;
-	double t1, t2;
-	int addr;
-
-	addr = 0;
-
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	t1 = ts.tv_sec + 1.0e-9 * ts.tv_nsec;
-	for (i = 0; i < TEST_COUNT; ++i) {
-		if (SYSINFO(&info)) {
-			perror("sysinfo");
-			exit(-1);
-		}
-	}
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	t2 = ts.tv_sec + 1.0e-9 * ts.tv_nsec;
-	return (t2 - t1) / TEST_COUNT;
-}
 
 static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
 {
 	struct ucontext_t *ctx = ucontext;
-	mcontext_t *mctx = &ctx->uc_mcontext;
-	int r;
-	char buf[1024];
-	int len;
+        mcontext_t *mctx = &ctx->uc_mcontext;
+        int r;
+        char buf[1024];
+        int len;
 
-	SYSCALL_UNBLOCK;
+        SYSCALL_UNBLOCK;
 
-	len = snprintf(buf, 1024, "[%d], sys_%d(%d,%d,%d,%d,%d,%d)\n", id,
-		       mctx->gregs[REG_RAX], mctx->gregs[REG_RDI],
-		       mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
-		       mctx->gregs[REG_R10], mctx->gregs[REG_R8],
-		       mctx->gregs[REG_R9]);
-	write(2, buf, len);
+        len = snprintf(buf, 1024, "[%d], sys_%d(%d,%d,%d,%d,%d,%d)\n", id,
+                       mctx->gregs[REG_RAX], mctx->gregs[REG_RDI],
+                       mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
+                       mctx->gregs[REG_R10], mctx->gregs[REG_R8],
+                       mctx->gregs[REG_R9]);
+        write(2, buf, len);
 
-	if (info->si_syscall > 0xf000) {
-		trapped_call_count ++;
-		mctx->gregs[REG_RAX] = 0xdeadbeef;
-		goto out;
-	}
+        if (info->si_syscall > 0xf000) {
+                trapped_call_count ++;
+                mctx->gregs[REG_RAX] = 0xdeadbeef;
+                goto out;
+        }
 
-	native_call_count++;
+        native_call_count++;
 	r = syscall(mctx->gregs[REG_RAX], mctx->gregs[REG_RDI],
-		    mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
-		    mctx->gregs[REG_R10], mctx->gregs[REG_R8],
-		    mctx->gregs[REG_R9]);
-	mctx->gregs[REG_RAX] = mctx->gregs[REG_RDX];
+                    mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
+                    mctx->gregs[REG_R10], mctx->gregs[REG_R8],
+                    mctx->gregs[REG_R9]);
+        mctx->gregs[REG_RAX] = mctx->gregs[REG_RDX];
 out:
-	SYSCALL_BLOCK;
+        SYSCALL_BLOCK;
 
 	__asm__ volatile("movq $0xf, %rax");
-	__asm__ volatile("leaveq");
-	__asm__ volatile("add $0x8, %rsp");
-	__asm__ volatile("jmp syscall_instruction_entry");
+        __asm__ volatile("leaveq");
+        __asm__ volatile("add $0x8, %rsp");
+        __asm__ volatile("syscall_dispatcher_start:");
+        __asm__ volatile("syscall");
+        __asm__ volatile("nop"); /* Landing pad within dispatcher area */
+        __asm__ volatile("syscall_dispatcher_end:");
 }
 
-void *do_t(int lock)
+int main(void)
 {
+	struct sigaction act;
 	int ret;
+	sigset_t mask;
 
-	printf("[%d] hello World\n", id);
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&mask);
 
-	if (prctl(59, sel_ptr, 0, 0, 0)) {
-		printf("prctl failed %s\n", strerror(errno));
-		exit (1);
-	}
-	*sel_ptr = lock;
-	printf("[%d] hello World 2\n", id);
-	*sel_ptr = !lock;
-	printf("[%d] hello World 3 sel=%d\n", id);
-}
-
-void *do_t1(void *arg)
-{
-	id = 1;
-	do_t(1);
-}
-
-void *do_t2(void *arg)
-{
-	id = 2;
-	do_t(0);
-}
-
-int main ()
-{
-	int ret;
-	pthread_t t1, t2;
-	const struct sigaction act = {
-		.sa_sigaction = handle_sigsys,
-		.sa_flags = SA_SIGINFO,
-		.sa_mask = 0
-	};
-	double time1, time2;
-	int selector = 0;
-
-	sel_ptr = &selector;
-
-
-	trapped_call_count = native_call_count = 0;
-	time1 = perf_syscall();
-	printf("Avg sycall time %.0lfns.\n", time1 * 1.0e9);
+	act.sa_sigaction = handle_sigsys;
+	act.sa_flags = SA_SIGINFO;
+	act.sa_mask = mask;
 
 	ret = sigaction(SIGSYS, &act, NULL);
 	if (ret) {
-		printf("Error sigaction: %s.\n", strerror(errno));
-		return -1;
-	}
-
-	if (prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_STORE_BYPASS, PR_SPEC_ENABLE,0, 0)) {
-		printf("Error enabling speculation: %s.\n", strerror(errno));
-		return -1;
-	}
-	ret = prctl(PR_GET_SPECULATION_CTRL, PR_SPEC_STORE_BYPASS, 0, 0, 0);
-	if (ret < 0) {
-		printf("Error getting speculation: %s.\n", strerror(errno));
-		return -1;
-	}
-
-	if (prctl(59, SYSCALL_DISABLE_BLOCK, &syscall_dispatcher, &selector,  0)) {
-		printf("prctl failed %s\n", strerror(errno));
-		exit (1);
-	}
-
-	selector = 1;
-
-	__asm__ volatile("movq $0xf001,%rax");
-	__asm__ volatile("syscall");
-	__asm__ volatile("movl %%eax, %0" : "=m"(ret));
-
-	if (selector)
-		printf("ret %#x.%d\n", ret, selector);
-	else
-		printf("Failed to undo selector ret %#x.%d\n", ret, selector);
-
-	if (!trapped_call_count)
-	{
-		printf("syscall trapping does not work.\n");
+		perror("Error sigaction:");
 		exit(-1);
 	}
 
-	SYSCALL_UNBLOCK
-	time2 = perf_syscall();
-	SYSCALL_BLOCK
+	fprintf(stderr, "Enabling syscall trapping.\n");
 
-	printf("trapped_call_count %u, native_call_count %u.\n", trapped_call_count, native_call_count);
-	printf("Avg sycall time %.0lfns.\n", time2 * 1.0e9);
-	printf("Interception overhead: %.1lf%% (+%.0lfns).\n",
-	       100.0 * (time2 / time1 - 1.0) , 1.0e9 * (time2 - time1));
+	if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
+		  syscall_dispatcher_start,
+		  (syscall_dispatcher_end - syscall_dispatcher_start + 1),
+		  &selector)) {
+		perror("prctl failed\n");
+		exit(-1);
+	}
+
+	size_t length = snprintf(NULL, 0, "Hello, World!\n") + 1;
+	char buffer[length];
+	snprintf(buffer, length, "Hello, World!\n");
+
+	SYSCALL_BLOCK;
+	
+	// perform some syscalls
+	syscall(MAGIC_SYSCALL_1);
+        syscall(SYS_gettid);
+	write(STDOUT_FILENO, buffer, length);
+
+#ifdef TEST_BLOCKED_RETURN
+	if (selector == SYSCALL_DISPATCH_FILTER_ALLOW) {
+		fprintf(stderr, "Failed to return with selector blocked.\n");
+		exit(-1);
+	}
+#endif
+
+	SYSCALL_UNBLOCK;
+
+	printf("trapped_call_count %lu, native_call_count %lu.\n",
+	       trapped_call_count, native_call_count);
+	return 0;
 
 }
-
