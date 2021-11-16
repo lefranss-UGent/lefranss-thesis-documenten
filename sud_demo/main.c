@@ -97,7 +97,8 @@ static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
                     mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
                     mctx->gregs[REG_R10], mctx->gregs[REG_R8],
                     mctx->gregs[REG_R9]);
-        mctx->gregs[REG_RAX] = mctx->gregs[REG_RDX];
+        printf("Return value of syscall: %d\n", r);
+	mctx->gregs[REG_RAX] = r; //mctx->gregs[REG_RDX];
 out:
         SYSCALL_BLOCK;
 
@@ -145,18 +146,22 @@ int main(void)
 
 	SYSCALL_BLOCK;
 	
-	// perform some syscalls
+	/* perform some syscalls */
+	// syscall of bad syscall number
 	syscall(MAGIC_SYSCALL_1);
+	// syscall 186
         syscall(SYS_gettid);
+	// syscall 1
 	write(STDOUT_FILENO, buffer, length);
 
+	/* open file, read from it, write the contents and close file syscalls */
 	int fd, n;
 	unsigned char buff[BUFSIZ];
-	if ( (fd = open("/etc/passwd", O_RDONLY)) < 0) {
+	if ( (fd = open("hello", O_RDONLY)) < 0) {
 		perror("No hello file found...");
 		exit(-1);
 	}
-	/*while ( (n = read(fd, buff, BUFSIZ)) > 0) {
+	while ( (n = read(fd, buff, BUFSIZ)) > 0) {
 		if (write(1, buff, n) < 0) {
 			perror("Error while writing out buffer...");
 			exit(1);
@@ -165,12 +170,11 @@ int main(void)
 	if (n < 0) {
 		perror("Error while reading hello file...");
 		exit(1);
-	}*/
+	}
 	if (close(fd) < 0) {
 		perror("Error while closing hello file...");
 		exit(1);
 	}
-
 
 #ifdef TEST_BLOCKED_RETURN
 	if (selector == SYSCALL_DISPATCH_FILTER_ALLOW) {

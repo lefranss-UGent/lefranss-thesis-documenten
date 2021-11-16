@@ -32,6 +32,15 @@ int main(int argc, char **argv)
 	if ((pid = fork()) == 0)
 	{
 		/* CHILD */
+		
+		////////////////////////////////////////////////////////
+		//						      //
+		//		TODO: reverse the filter	      //
+		//		only allow some syscalls	      //
+		//		and trace all other sys-	      //
+		//		calls.				      //
+		//                                                    //
+		////////////////////////////////////////////////////////
 
 		// trace write, read and openat syscall (openat is used on ubuntu rather than open)
 		// NOTE: execve (no. 59) is always traced!
