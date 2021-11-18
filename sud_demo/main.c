@@ -73,13 +73,13 @@ static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
 {
 	struct ucontext_t *ctx = ucontext;
         mcontext_t *mctx = &ctx->uc_mcontext;
-        int r;
+        long long r;
         char buf[1024];
         int len;
 
         SYSCALL_UNBLOCK;
 
-        len = snprintf(buf, 1024, "[%d], sys_%d(%d,%d,%d,%d,%d,%d)\n", id,
+        len = snprintf(buf, 1024, "[%d], sys_%lld(%lld,%lld,%lld,%lld,%lld,%lld)\n", id,
                        mctx->gregs[REG_RAX], mctx->gregs[REG_RDI],
                        mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
                        mctx->gregs[REG_R10], mctx->gregs[REG_R8],
@@ -97,8 +97,12 @@ static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
                     mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
                     mctx->gregs[REG_R10], mctx->gregs[REG_R8],
                     mctx->gregs[REG_R9]);
-        printf("Return value of syscall: %d\n", r);
-	mctx->gregs[REG_RAX] = r; //mctx->gregs[REG_RDX];
+
+	len = snprintf(buf, 1024, "Return value of syscall: %lld\n", r);
+        write(2, buf, len);
+
+
+	mctx->gregs[REG_RAX] = r;
 out:
         SYSCALL_BLOCK;
 
@@ -147,6 +151,9 @@ int main(void)
 	SYSCALL_BLOCK;
 	
 	/* perform some syscalls */
+	// printf that causes syscall 1
+	printf("Hello, World! From printf\n");
+	printf("Hello, World! Again from printf\n");	
 	// syscall of bad syscall number
 	syscall(MAGIC_SYSCALL_1);
 	// syscall 186
