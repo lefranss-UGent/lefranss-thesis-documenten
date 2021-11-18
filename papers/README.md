@@ -39,8 +39,11 @@ BPF filters:
 
 ## syscall user dispatch
 * https://www.kernel.org/doc/html/latest/admin-guide/syscall-user-dispatch.html
-* Example: https://gitlab.collabora.com/krisman/syscall-disable-personality/-/tree/master/
+* https://lwn.net/Articles/826313/
+* Example: https://gitlab.collabora.com/krisman/syscall-disable-personality/-/tree/master/ (found on https://lore.kernel.org/lkml/20200716193141.4068476-2-krisman@collabora.com/)
 * Example: https://elixir.bootlin.com/linux/v5.11/source/tools/testing/selftests/syscall_user_dispatch
-* Context: https://www.gnu.org/software/libc/manual/html_node/System-V-contexts.html
+* Context: https://www.gnu.org/software/libc/manual/html_node/System-V-contexts.html, https://man7.org/linux/man-pages/man2/getcontext.2.html
 * Signal handler: https://man7.org/linux/man-pages/man7/signal.7.html
 * Signal action: https://man7.org/linux/man-pages/man2/sigaction.2.html, https://pubs.opengroup.org/onlinepubs/007904875/functions/sigaction.html
+* https://man7.org/linux/man-pages/man2/syscall.2.html
+* Syscall in assembly (register setting and syscall call): https://stackoverflow.com/questions/20326025/linux-assembly-how-to-call-syscall
