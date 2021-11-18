@@ -79,7 +79,7 @@ static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
 
         SYSCALL_UNBLOCK;
 
-        len = snprintf(buf, 1024, "[%d], sys_%lld(%lld,%lld,%lld,%lld,%lld,%lld)\n", id,
+        len = snprintf(buf, 1024, "--------------------------------------------------\n[%d] SYSCALL NO %lld\n\tARG1 %lld\n\tARG2 %lld\n\tARG3 %lld\n\tARG4 %lld\n\tARG5 %lld\n\tARG6 %lld\n\n", id,
                        mctx->gregs[REG_RAX], mctx->gregs[REG_RDI],
                        mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
                        mctx->gregs[REG_R10], mctx->gregs[REG_R8],
@@ -98,7 +98,7 @@ static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
                     mctx->gregs[REG_R10], mctx->gregs[REG_R8],
                     mctx->gregs[REG_R9]);
 
-	len = snprintf(buf, 1024, "Return value of syscall: %lld\n", r);
+	len = snprintf(buf, 1024, "\nReturn value of syscall: %lld\n", r);
         write(2, buf, len);
 
 
@@ -192,7 +192,7 @@ int main(void)
 
 	SYSCALL_UNBLOCK;
 
-	printf("trapped_call_count %lu, native_call_count %lu.\n",
+	printf("##################################################\ntrapped_call_count:\t%lu\nnative_call_count:\t%lu\n",
 		trapped_call_count, native_call_count);
 	return 0;
 }
