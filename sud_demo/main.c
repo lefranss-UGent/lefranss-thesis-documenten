@@ -106,6 +106,7 @@ static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
 out:
         SYSCALL_BLOCK;
 
+	// sigreturn code
 	__asm__ volatile("movq $0xf, %rax");
         __asm__ volatile("leaveq");
         __asm__ volatile("add $0x8, %rsp");
