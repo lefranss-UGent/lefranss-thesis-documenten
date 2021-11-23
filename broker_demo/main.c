@@ -41,7 +41,7 @@ static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
                        mctx->gregs[REG_R9]);
         write(2, buf, len);
 
-	r = syscall(mctx->gregs[REG_RAX], mctx->gregs[REG_RDI],
+	/*r = syscall(mctx->gregs[REG_RAX], mctx->gregs[REG_RDI],
                     mctx->gregs[REG_RSI], mctx->gregs[REG_RDX],
                     mctx->gregs[REG_R10], mctx->gregs[REG_R8],
                     mctx->gregs[REG_R9]);
@@ -56,7 +56,7 @@ static void handle_sigsys(int sig, siginfo_t *info, void *ucontext)
         __asm__ volatile("leaveq");
         __asm__ volatile("add $0x8, %rsp");
         __asm__ volatile("syscall");
-        __asm__ volatile("nop");
+        __asm__ volatile("nop");*/
 }
 
 int main(int argc, char **argv)
@@ -87,19 +87,19 @@ int main(int argc, char **argv)
 			perror("Error sigaction:");
 			exit(-1);
 		}
-		if (sigprocmask(SIG_UNBLOCK, &mask, NULL)) {
+		/*if (sigprocmask(SIG_UNBLOCK, &mask, NULL)) {
 			perror("sigprocmask");
 			return -1;
-		}
+		}*/
 
 		struct sock_filter filter[] = {
 			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, nr)),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_getpid, 0, 1), // redirect to signal handler
-			BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW),
+			BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRAP),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_write, 0, 1),
 			BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRACE),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_read, 0, 1),
-                       BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW),
+                       BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRACE),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_openat, 0, 1),
                        BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_close, 0, 1), // redirect to signal handler
@@ -134,15 +134,34 @@ int main(int argc, char **argv)
 		kill(getpid(), SIGSTOP);
 		
 		// some functions that invoke syscalls
-		printf("hello test 1\n");
-		printf("hello test 2\n");
-		getpid();
-		FILE *fp;
-		char buff[255];
-		fp = fopen("/home/lennertfranssens/Documents/thesis/broker_demo/hello", "r");
-		fscanf(fp, "%s", buff);
-		fclose(fp);
-		printf("%s\n", buff);
+		syscall(SYS_gettid);
+		syscall(SYS_getpid);
+		size_t length = snprintf(NULL, 0, "Hello, World!\n") + 1;
+		char buffer[length];
+		snprintf(buffer, length, "Hello, World!\n");
+		write(STDOUT_FILENO, buffer, length);
+
+		/* open file, read from it, write the contents and close file syscalls */
+		int fd, n;
+		unsigned char buff[BUFSIZ];
+		if ( (fd = open("hello", O_RDONLY)) < 0) {
+			perror("No hello file found...");
+			exit(-1);
+		}
+		while ( (n = read(fd, buff, BUFSIZ)) > 0) {
+			if (write(1, buff, n) < 0) {
+				perror("Error while writing out buffer...");
+				exit(1);
+			}
+		}
+		if (n < 0) {
+			perror("Error while reading hello file...");
+			exit(1);
+		}
+		if (close(fd) < 0) {
+			perror("Error while closing hello file...");
+			exit(1);
+		}
 		
 		return 0;
 	} else {
@@ -153,7 +172,6 @@ int main(int argc, char **argv)
 		
 		while (1)
 		{
-			sleep(1);
 			//ptrace(PTRACE_SYSCALL, pid, 0, 0); // tracks all system calls and not only the filtered (not the purpose of this program!!!)
 			ptrace(PTRACE_CONT, pid, 0, SIGSYS);
 			waitpid(pid, &status, 0);
