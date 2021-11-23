@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 		struct sock_filter filter[] = {
 			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, nr)),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_getpid, 0, 1), // redirect to signal handler
-			BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRAP),
+			BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_write, 0, 1),
 			BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRACE),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_read, 0, 1),
@@ -155,7 +155,7 @@ int main(int argc, char **argv)
 		{
 			sleep(1);
 			//ptrace(PTRACE_SYSCALL, pid, 0, 0); // tracks all system calls and not only the filtered (not the purpose of this program!!!)
-			ptrace(PTRACE_CONT, pid, 0, 0);
+			ptrace(PTRACE_CONT, pid, 0, SIGSYS);
 			waitpid(pid, &status, 0);
 			printf("--------------------------------\n");
 			printf("[waitpid status: 0x%08x]\n", status);
@@ -180,6 +180,9 @@ int main(int argc, char **argv)
 			} else if (WIFEXITED(status) == SIGSTOP) {
 				printf("received a SIGSTOP\n");
 			} else if (WIFEXITED(status)) {
+				printf("CHILD is exiting\n");
+				return 1;
+			} else {
 				printf("CHILD is exiting\n");
 				return 1;
 			}
