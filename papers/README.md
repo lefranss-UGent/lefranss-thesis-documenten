@@ -21,11 +21,16 @@ BPF filters:
 * https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html
 * http://terenceli.github.io/%E6%8A%80%E6%9C%AF/2019/02/04/seccomp
 * Example: https://gist.github.com/fntlnz/08ae20befb91befd9a53cd91cdc6d507
+* TRAP/ALLOW Example: https://elixir.bootlin.com/linux/latest/source/samples/seccomp/bpf-direct.c
+* https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html
 
 ## unotify
 * https://f5.pm/go-73639.html
 * https://lwn.net/Articles/756233/
 * https://lwn.net/Articles/851813/
+* https://lwn.net/Articles/800277/
+* https://man7.org/linux/man-pages/man2/seccomp_unotify.2.html
+* https://man7.org/linux/man-pages/man2/seccomp.2.html
 * https://brauner.github.io/2020/07/23/seccomp-notify.html
 * https://www.kernel.org/doc/Documentation/prctl/seccomp_filter.txt
 * Example: https://man7.org/tlpi/code/online/dist/seccomp/seccomp_user_notification.c.html
