@@ -35,9 +35,12 @@ int main(int argc, char **argv)
 	
 		// example on: https://man7.org/linux/man-pages/man2/seccomp.2.html
 		struct sock_filter filter[] = {
+			// TODO: check magic value in r12 (p. 111 Adv. Tech. MVEE) -> SECCOMP_RET_KILL_PROCESS? if not correct, else resume filtering
+			//BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[12])),
+			//BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, MAGIC_VALUE_FROM_MEMORY, 1, 0),
+                        //BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS),
 			// load system call number into accumulator
 			BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
-			// TODO: check magic value in r12 (p. 111 Adv. Tech. MVEE) -> SECCOMP_RET_KILL_PROCESS? if not correct, else resume filtering
 			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_uname, 0, 1),
 			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
 			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getpriority, 0, 1),
