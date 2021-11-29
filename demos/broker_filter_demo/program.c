@@ -13,7 +13,7 @@ int main(int argc, char** argv)
 	FILE *fp;
 	char buff[255];
 	// fopen will execute an openat syscall (no. 257 - or 2 if it was open)
-	fp = fopen("/home/lennertfranssens/Documents/thesis/bpf_demo/hello", "r");
+	fp = fopen("/home/lennertfranssens/Documents/thesis/demos/broker_filter_demo/hello", "r");
 	// fscanf will execute a read syscall (no. 0)
 	fscanf(fp, "%s", buff);
 	// fclose will execute a close syscall (no. 3)

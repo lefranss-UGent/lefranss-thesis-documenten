@@ -32,31 +32,176 @@ int main(int argc, char **argv)
 	if ((pid = fork()) == 0)
 	{
 		/* CHILD */
-		
-		////////////////////////////////////////////////////////
-		//						      //
-		//		TODO: reverse the filter	      //
-		//		only allow some syscalls	      //
-		//		and trace all other sys-	      //
-		//		calls.				      //
-		//                                                    //
-		////////////////////////////////////////////////////////
-
-		// trace write, read and openat syscall (openat is used on ubuntu rather than open)
-		// NOTE: execve (no. 59) is always traced!
-		// TODO: you can uncomment the lines of __NR_close to demonstrate that this is allowed and not traced if not in the filter (purpose of the whole demonstration)
+	
+		// example on: https://man7.org/linux/man-pages/man2/seccomp.2.html
 		struct sock_filter filter[] = {
-			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, offsetof(struct seccomp_data, nr)),
-			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_write, 0, 1),
-			BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRACE),
-			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_read, 0, 1),
-                        BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRACE),
-			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_openat, 0, 1),
-                        BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRACE),
-			//BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_close, 0, 1), // syscall number 3, takes 1 argument: int fd (most of the time it is 3, the first free file descriptor)
-                        //BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_TRACE),
-			BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ALLOW),
+			// load system call number into accumulator
+			BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
+			// TODO: check magic value in r12 (p. 111 Adv. Tech. MVEE) -> SECCOMP_RET_KILL_PROCESS? if not correct, else resume filtering
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_uname, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getpriority, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_nanosleep, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getrusage, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_sysinfo, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_times, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_capget, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getitimer, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_futex, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_gettimeofday, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_time, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clock_gettime, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getpid, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getegid, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_geteuid, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getgid, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getpgrp, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getppid, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_gettid, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getuid, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_sched_yield, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getcwd, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_access, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_faccessat, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_stat, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fstat, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_lstat, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_newfstatat, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getdents, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_readlink, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_readlinkat, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getxattr, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_lgetxattr, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fgetxattr, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_lseek, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_alarm, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_setitimer, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_timerfd_gettime, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_madvise, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fadvise64, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_read, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_pread64, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_readv, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_preadv, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_poll, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_select, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_timerfd_settime, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_sync, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fdatasync, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_syncfs, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_write, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_pwrite64, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_writev, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_pwritev, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_recvfrom, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_recvmsg, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_recvmmsg, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getsockname, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getpeername, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getsockopt, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_sendto, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_sendmsg, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_sendmmsg, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_sendfile, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_epoll_wait, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_epoll_ctl, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_shutdown, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_setsockopt, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 1),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			// IF NOT ALLOW EXECVE (and related from exec family) THEN THE FILTER IS NOT WORKING (because we need execve and it is not working in our syscall replacement)
+			// BUT even though we ALLOW them here, they are traced too
+			// TODO: do some research to find what causes the 'always tracing' of exec-family syscalls
+			BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_execve, 0, 1),
+                        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+			BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRACE),
 		};
+
+		/*
+		  special attention for:
+			  	case __NR_futex: return ipmon_handle_futex_maybe_checked(args);
+				case __NR_read: return ipmon_handle_read_maybe_checked(args);
+				case __NR_pread64: return ipmon_handle_pread64_maybe_checked(args);
+				case __NR_readv: return ipmon_handle_readv_maybe_checked(args);
+				case __NR_preadv: return ipmon_handle_preadv_maybe_checked(args);
+				case __NR_poll: return ipmon_handle_poll_maybe_checked(args);
+				case __NR_select: return ipmon_handle_select_maybe_checked(args);
+				case __NR_write: return ipmon_handle_write_maybe_checked(args);
+				case __NR_pwrite64: return ipmon_handle_pwrite64_maybe_checked(args);
+				case __NR_writev: return ipmon_handle_writev_maybe_checked(args);
+				case __NR_pwritev: return ipmon_handle_pwritev_maybe_checked(args);
+		  and:
+				futex: ARG2 (args.arg2)
+				ioctl: ARG2 (args.arg2)
+			        fcntl (not found in MVEE_ipmon.cpp)	
+		*/
 		
 		// set filter
 		struct sock_fprog prog = {
@@ -127,9 +272,12 @@ int main(int argc, char **argv)
 
 		waitpid(pid, &status, 0);
 		ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_TRACESECCOMP);
+
+		printf("__NR_execve: %d\n", __NR_execve);
 		
 		while (1)
 		{
+			//sleep(1);
 			//ptrace(PTRACE_SYSCALL, pid, 0, 0); // tracks all system calls and not only the filtered (not the purpose of this program!!!)
 			ptrace(PTRACE_CONT, pid, 0, 0);
 			waitpid(pid, &status, 0);
