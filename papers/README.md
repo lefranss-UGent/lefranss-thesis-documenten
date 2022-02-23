@@ -52,3 +52,6 @@ BPF filters:
 * Signal action: https://man7.org/linux/man-pages/man2/sigaction.2.html, https://pubs.opengroup.org/onlinepubs/007904875/functions/sigaction.html
 * https://man7.org/linux/man-pages/man2/syscall.2.html
 * Syscall in assembly (register setting and syscall call): https://stackoverflow.com/questions/20326025/linux-assembly-how-to-call-syscall
+
+## glibc
+* Intercept syscall in glibc: https://public-inbox.org/libc-alpha/e68e016fc1573fa57a14dbe419641fa7c1b22f9c.1568219400.git.isaku.yamahata@gmail.com/ (and next post in thread)
